@@ -1,0 +1,1960 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>华东科技大学 · 综合校情决策支持与领导驾驶舱</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Apache ECharts -->
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#eef6ff',
+              100: '#d9ebff',
+              500: '#2563eb',
+              600: '#1d4ed8',
+              900: '#1e3a8a',
+            },
+            panel: '#111b2e',
+            'panel-border': '#1e293b',
+            'panel-sub': '#162238'
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    /* Custom scrollbar */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #0b111e;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #1e293b;
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #334155;
+    }
+    .glow-cyan {
+      box-shadow: 0 0 15px rgba(6, 182, 212, 0.25);
+    }
+    .glow-blue {
+      box-shadow: 0 0 15px rgba(37, 99, 235, 0.25);
+    }
+    .glow-red {
+      box-shadow: 0 0 15px rgba(239, 68, 68, 0.35);
+    }
+    @keyframes pulseSlow {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+    .animate-pulse-slow {
+      animation: pulseSlow 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    }
+  </style>
+</head>
+<body class="bg-[#0b111e] text-slate-100 font-sans min-h-screen flex flex-col selection:bg-blue-600 selection:text-white">
+
+  <!-- ================= TOP HEADER ================= -->
+  <header class="border-b border-slate-800 bg-[#0d1526]/90 backdrop-blur sticky top-0 z-40 px-6 py-3">
+    <div class="flex items-center justify-between">
+      
+      <!-- Brand & Info -->
+      <div class="flex items-center space-x-4">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 via-indigo-600 to-cyan-400 flex items-center justify-center shadow-lg shadow-blue-500/20">
+          <i data-lucide="graduation-cap" class="w-6 h-6 text-white"></i>
+        </div>
+        <div>
+          <div class="flex items-center space-x-2">
+            <h1 class="text-xl font-bold tracking-tight bg-gradient-to-r from-white via-slate-100 to-slate-400 bg-clip-text text-transparent">
+              华东科技大学 · 领导决策驾驶舱
+            </h1>
+            <span class="px-2 py-0.5 text-xs font-semibold bg-blue-500/20 text-blue-400 border border-blue-500/30 rounded-full">
+              双一流A类高校
+            </span>
+          </div>
+          <div class="flex items-center space-x-3 text-xs text-slate-400 mt-0.5">
+            <span id="current-academic-term">2026-2027学年 秋季学期 第4周</span>
+            <span>•</span>
+            <span class="flex items-center text-emerald-400 font-medium">
+              <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping mr-1.5 inline-block"></span>
+              全校主数据中心已联网 (84个子系统)
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Center Live Stats Marquee / Urgent Alert Ticker -->
+      <div class="hidden xl:flex items-center bg-panel-sub border border-slate-800/80 px-4 py-1.5 rounded-full text-xs max-w-xl truncate">
+        <span class="text-rose-400 font-semibold flex items-center mr-2 shrink-0">
+          <i data-lucide="alert-triangle" class="w-3.5 h-3.5 mr-1 animate-pulse"></i> 实时预警督办:
+        </span>
+        <span id="ticker-text" class="text-slate-300 truncate cursor-pointer hover:text-white transition-colors" onclick="openDispatchModal('计算机与软件学院 2026届毕业去向落实率偏低 (同比落后8.2%)', '教学副校长')">
+          [教学] 计算机与软件学院2026届去向落实率偏低 (落后8.2%) • [财务] 人工智能研究院设备预算执行偏慢(31.4%) • [后勤] 3号科研楼实验室温湿度正常
+        </span>
+      </div>
+
+      <!-- Right Action Controls -->
+      <div class="flex items-center space-x-3">
+        <!-- Campus Selector -->
+        <select id="campus-select" class="bg-slate-800/90 text-xs border border-slate-700 text-slate-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-blue-500">
+          <option value="all">全校区 (全部数据)</option>
+          <option value="nanhu">南湖主校区 (32,450人)</option>
+          <option value="putuo">普陀科技园校区 (6,890人)</option>
+          <option value="haigang">海港国际创新港 (4,120人)</option>
+        </select>
+
+        <!-- Current Clock -->
+        <div class="text-right hidden sm:block">
+          <div id="live-clock" class="text-sm font-mono font-semibold text-slate-200">2026-09-21 08:30:57</div>
+          <div class="text-[11px] text-slate-400">星期一 • 晴 24°C</div>
+        </div>
+
+        <!-- Quick Alert Hub Button -->
+        <button onclick="toggleAlertDrawer()" class="relative p-2 rounded-lg bg-slate-800 border border-slate-700 hover:bg-slate-700 text-slate-200 transition-colors">
+          <i data-lucide="bell" class="w-4 h-4"></i>
+          <span class="absolute -top-1 -right-1 w-4 h-4 bg-rose-500 text-[10px] text-white font-bold rounded-full flex items-center justify-center ring-2 ring-[#0b111e]">
+            4
+          </span>
+        </button>
+
+        <!-- Export Snapshot -->
+        <button onclick="simulateExport()" class="flex items-center space-x-1 px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-medium transition-all shadow-sm shadow-blue-500/30">
+          <i data-lucide="file-down" class="w-3.5 h-3.5"></i>
+          <span class="hidden md:inline">生成校务简报</span>
+        </button>
+      </div>
+
+    </div>
+
+    <!-- Navigation Tabs (1 Main Overview + 6 Thematic Cockpits) -->
+    <nav class="flex items-center space-x-1 mt-3 overflow-x-auto pb-1 text-sm border-t border-slate-800/60 pt-2" id="nav-tabs">
+      <button onclick="switchTab('overview')" data-tab="overview" class="tab-btn active px-3.5 py-1.5 rounded-lg font-medium transition-all flex items-center space-x-2 bg-blue-600 text-white shadow-md shadow-blue-600/30">
+        <i data-lucide="layout-dashboard" class="w-4 h-4"></i>
+        <span>综合态势总览 <span class="text-[10px] bg-blue-700/60 px-1.5 py-0.5 rounded ml-1">书记/校长</span></span>
+      </button>
+
+      <button onclick="switchTab('education')" data-tab="education" class="tab-btn px-3.5 py-1.5 rounded-lg font-medium text-slate-300 hover:text-white hover:bg-slate-800/80 transition-all flex items-center space-x-1.5">
+        <i data-lucide="book-open" class="w-4 h-4 text-sky-400"></i>
+        <span>教学与人才培养</span>
+      </button>
+
+      <button onclick="switchTab('research')" data-tab="research" class="tab-btn px-3.5 py-1.5 rounded-lg font-medium text-slate-300 hover:text-white hover:bg-slate-800/80 transition-all flex items-center space-x-1.5">
+        <i data-lucide="flask-conical" class="w-4 h-4 text-violet-400"></i>
+        <span>学科与科学研究</span>
+      </button>
+
+      <button onclick="switchTab('faculty')" data-tab="faculty" class="tab-btn px-3.5 py-1.5 rounded-lg font-medium text-slate-300 hover:text-white hover:bg-slate-800/80 transition-all flex items-center space-x-1.5">
+        <i data-lucide="users" class="w-4 h-4 text-emerald-400"></i>
+        <span>师资队伍与人事</span>
+      </button>
+
+      <button onclick="switchTab('finance')" data-tab="finance" class="tab-btn px-3.5 py-1.5 rounded-lg font-medium text-slate-300 hover:text-white hover:bg-slate-800/80 transition-all flex items-center space-x-1.5">
+        <i data-lucide="landmark" class="w-4 h-4 text-amber-400"></i>
+        <span>财务资产与设备</span>
+      </button>
+
+      <button onclick="switchTab('student')" data-tab="student" class="tab-btn px-3.5 py-1.5 rounded-lg font-medium text-slate-300 hover:text-white hover:bg-slate-800/80 transition-all flex items-center space-x-1.5">
+        <i data-lucide="heart-pulse" class="w-4 h-4 text-pink-400"></i>
+        <span>学生发展与思政</span>
+        <span class="w-2 h-2 rounded-full bg-rose-500 ml-0.5"></span>
+      </button>
+
+      <button onclick="switchTab('security')" data-tab="security" class="tab-btn px-3.5 py-1.5 rounded-lg font-medium text-slate-300 hover:text-white hover:bg-slate-800/80 transition-all flex items-center space-x-1.5">
+        <i data-lucide="shield-check" class="w-4 h-4 text-cyan-400"></i>
+        <span>智慧后勤与大安全</span>
+      </button>
+    </nav>
+  </header>
+
+  <!-- ================= MAIN CONTENT WRAPPER ================= -->
+  <main class="flex-1 p-5 max-w-[1920px] mx-auto w-full">
+
+    <!-- ========================================================================= -->
+    <!-- TAB 1: 综合态势总览 (面向：党委书记、校长) -->
+    <!-- ========================================================================= -->
+    <div id="tab-overview" class="tab-pane space-y-5">
+
+      <!-- Top Row 5 North Star KPI Cards -->
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+        
+        <!-- KPI 1 -->
+        <div class="bg-panel border border-panel-border rounded-xl p-4 relative overflow-hidden group hover:border-blue-500/50 transition-all">
+          <div class="flex items-center justify-between text-slate-400 text-xs">
+            <span>师生总规模 (在校生/教工)</span>
+            <span class="p-1.5 bg-blue-500/10 text-blue-400 rounded-lg"><i data-lucide="users" class="w-4 h-4"></i></span>
+          </div>
+          <div class="mt-2 flex items-baseline space-x-2">
+            <span class="text-2xl font-bold font-mono tracking-tight text-white">43,460</span>
+            <span class="text-xs text-slate-400">人</span>
+            <span class="text-xs text-emerald-400 flex items-center"><i data-lucide="trending-up" class="w-3 h-3 mr-0.5"></i>+3.2%</span>
+          </div>
+          <div class="mt-3 flex items-center justify-between text-[11px] text-slate-400 border-t border-slate-800/80 pt-2">
+            <span>本科 24,120</span>
+            <span>硕博 16,140</span>
+            <span>教工 3,200</span>
+          </div>
+        </div>
+
+        <!-- KPI 2 -->
+        <div class="bg-panel border border-panel-border rounded-xl p-4 relative overflow-hidden group hover:border-amber-500/50 transition-all">
+          <div class="flex items-center justify-between text-slate-400 text-xs">
+            <span>2026年度财务总预算与执行</span>
+            <span class="p-1.5 bg-amber-500/10 text-amber-400 rounded-lg"><i data-lucide="wallet" class="w-4 h-4"></i></span>
+          </div>
+          <div class="mt-2 flex items-baseline space-x-2">
+            <span class="text-2xl font-bold font-mono tracking-tight text-white">48.65</span>
+            <span class="text-xs text-slate-400">亿元</span>
+            <span class="text-xs text-slate-400">/ 进度 <b class="text-amber-400 font-mono">68.4%</b></span>
+          </div>
+          <div class="mt-2 w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
+            <div class="bg-amber-500 h-full rounded-full" style="width: 68.4%"></div>
+          </div>
+          <div class="mt-2 flex items-center justify-between text-[11px] text-slate-400">
+            <span>序时参考进度: 72.5%</span>
+            <span class="text-amber-400 font-medium">偏缓 -4.1%</span>
+          </div>
+        </div>
+
+        <!-- KPI 3 -->
+        <div class="bg-panel border border-panel-border rounded-xl p-4 relative overflow-hidden group hover:border-violet-500/50 transition-all">
+          <div class="flex items-center justify-between text-slate-400 text-xs">
+            <span>年度科研到账经费</span>
+            <span class="p-1.5 bg-violet-500/10 text-violet-400 rounded-lg"><i data-lucide="microscope" class="w-4 h-4"></i></span>
+          </div>
+          <div class="mt-2 flex items-baseline space-x-2">
+            <span class="text-2xl font-bold font-mono tracking-tight text-white">14.82</span>
+            <span class="text-xs text-slate-400">亿元</span>
+            <span class="text-xs text-emerald-400 flex items-center"><i data-lucide="trending-up" class="w-3 h-3 mr-0.5"></i>+12.6%</span>
+          </div>
+          <div class="mt-3 flex items-center justify-between text-[11px] text-slate-400 border-t border-slate-800/80 pt-2">
+            <span>国家自科/社科: 236项</span>
+            <span class="text-violet-400 font-medium">横向转化 5.2亿</span>
+          </div>
+        </div>
+
+        <!-- KPI 4 -->
+        <div class="bg-panel border border-panel-border rounded-xl p-4 relative overflow-hidden group hover:border-sky-500/50 transition-all">
+          <div class="flex items-center justify-between text-slate-400 text-xs">
+            <span>国家级高层次人才与生师比</span>
+            <span class="p-1.5 bg-sky-500/10 text-sky-400 rounded-lg"><i data-lucide="award" class="w-4 h-4"></i></span>
+          </div>
+          <div class="mt-2 flex items-baseline space-x-2">
+            <span class="text-2xl font-bold font-mono tracking-tight text-white">128</span>
+            <span class="text-xs text-slate-400">人</span>
+            <span class="text-xs text-slate-300 ml-2">生师比 <b class="text-emerald-400 font-mono">16.8 : 1</b></span>
+          </div>
+          <div class="mt-3 flex items-center justify-between text-[11px] text-slate-400 border-t border-slate-800/80 pt-2">
+            <span>院士/顶尖: 14人</span>
+            <span>优青/杰青: 62人</span>
+            <span class="text-emerald-400">符合达标线</span>
+          </div>
+        </div>
+
+        <!-- KPI 5 -->
+        <div class="bg-panel border border-panel-border rounded-xl p-4 relative overflow-hidden group hover:border-emerald-500/50 transition-all">
+          <div class="flex items-center justify-between text-slate-400 text-xs">
+            <span>校园安全与综合治理态势</span>
+            <span class="p-1.5 bg-emerald-500/10 text-emerald-400 rounded-lg"><i data-lucide="shield" class="w-4 h-4"></i></span>
+          </div>
+          <div class="mt-2 flex items-baseline space-x-2">
+            <span class="text-2xl font-bold font-mono tracking-tight text-emerald-400">98.6</span>
+            <span class="text-xs text-slate-400">分 (绿灯健康)</span>
+          </div>
+          <div class="mt-3 flex items-center justify-between text-[11px] text-slate-400 border-t border-slate-800/80 pt-2">
+            <span class="text-rose-400 font-medium">在办督办: 4项</span>
+            <span class="text-emerald-400">危化品100%在控</span>
+            <span>零重大舆情</span>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Main Middle Section: Strategic Goals Radar + Trend Chart + Alert Center -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-5">
+        
+        <!-- Left: Strategic "Double First-Class" Milestones & Benchmarking (4 Cols) -->
+        <div class="lg:col-span-4 space-y-5">
+          
+          <!-- Double First-Class Radar -->
+          <div class="bg-panel border border-panel-border rounded-xl p-4">
+            <div class="flex items-center justify-between mb-2">
+              <div class="flex items-center space-x-2">
+                <span class="w-2 h-4 bg-blue-500 rounded-sm"></span>
+                <h3 class="font-semibold text-sm text-slate-200">十四五规划与双一流关键指标达成度</h3>
+              </div>
+              <span class="text-xs text-slate-400">对标省属一流标杆</span>
+            </div>
+            <div id="chart-strategic-radar" class="w-full h-64"></div>
+            <div class="grid grid-cols-2 gap-2 text-xs mt-1">
+              <div class="bg-panel-sub p-2 rounded-lg border border-slate-800">
+                <div class="text-slate-400">ESI全球前1%学科</div>
+                <div class="text-sm font-bold text-white mt-0.5">8 个 <span class="text-emerald-400 text-xs font-normal">(前1‰: 2个)</span></div>
+              </div>
+              <div class="bg-panel-sub p-2 rounded-lg border border-slate-800">
+                <div class="text-slate-400">国家三大奖培育项</div>
+                <div class="text-sm font-bold text-white mt-0.5">6 项 <span class="text-sky-400 text-xs font-normal">(2项已进复审)</span></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Quick Strategic Milestone Progress List -->
+          <div class="bg-panel border border-panel-border rounded-xl p-4">
+            <div class="flex items-center justify-between mb-3">
+              <h3 class="font-semibold text-sm text-slate-200">年度重点攻坚战略任务</h3>
+              <span class="text-xs text-blue-400 cursor-pointer hover:underline">查看台账</span>
+            </div>
+            <div class="space-y-3 text-xs">
+              <div>
+                <div class="flex justify-between mb-1">
+                  <span class="text-slate-300">新一轮博士学位授权点申报</span>
+                  <span class="text-emerald-400 font-mono">100% 已提交评审</span>
+                </div>
+                <div class="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
+                  <div class="bg-emerald-500 h-full rounded-full" style="width: 100%"></div>
+                </div>
+              </div>
+              <div>
+                <div class="flex justify-between mb-1">
+                  <span class="text-slate-300">海港国际校区二期科研大楼入驻率</span>
+                  <span class="text-amber-400 font-mono">62% (时限11月前)</span>
+                </div>
+                <div class="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
+                  <div class="bg-amber-500 h-full rounded-full" style="width: 62%"></div>
+                </div>
+              </div>
+              <div>
+                <div class="flex justify-between mb-1">
+                  <span class="text-slate-300">千人级企业横向重大技术合同转化突破</span>
+                  <span class="text-blue-400 font-mono">85% (已达4.25亿)</span>
+                </div>
+                <div class="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
+                  <div class="bg-blue-500 h-full rounded-full" style="width: 85%"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Center: Core Monthly Multi-Year Dynamics Trend (5 Cols) -->
+        <div class="lg:col-span-5 space-y-5">
+          <div class="bg-panel border border-panel-border rounded-xl p-4">
+            <div class="flex items-center justify-between mb-2">
+              <div class="flex items-center space-x-2">
+                <span class="w-2 h-4 bg-violet-500 rounded-sm"></span>
+                <h3 class="font-semibold text-sm text-slate-200">近三年关键办学指标演进态势</h3>
+              </div>
+              <div class="flex space-x-1 text-xs">
+                <button class="px-2 py-0.5 bg-blue-600/30 text-blue-300 border border-blue-500/30 rounded">科研到账</button>
+                <button class="px-2 py-0.5 bg-slate-800 text-slate-400 rounded hover:text-white">高层次人才</button>
+                <button class="px-2 py-0.5 bg-slate-800 text-slate-400 rounded hover:text-white">毕业去向率</button>
+              </div>
+            </div>
+            <div id="chart-master-trend" class="w-full h-72"></div>
+            <div class="flex items-center justify-between text-xs text-slate-400 px-2 pt-2 border-t border-slate-800">
+              <span>注: 2026年到账科研经费较2024年增长38.5%，横向应用研发增速明显。</span>
+            </div>
+          </div>
+
+          <!-- College Performance Ranking Table (With Direct Drilldown Click) -->
+          <div class="bg-panel border border-panel-border rounded-xl p-4">
+            <div class="flex items-center justify-between mb-3">
+              <div class="flex items-center space-x-2">
+                <span class="w-2 h-4 bg-sky-500 rounded-sm"></span>
+                <h3 class="font-semibold text-sm text-slate-200">二级学院办学绩效积分与穿透 (点击可穿透画像)</h3>
+              </div>
+              <span class="text-xs text-slate-400">共 18 个教学科研实体</span>
+            </div>
+            <div class="overflow-x-auto">
+              <table class="w-full text-left text-xs text-slate-300">
+                <thead class="bg-slate-800/70 text-slate-400 font-medium">
+                  <tr>
+                    <th class="py-2 px-3 rounded-l">学院名称</th>
+                    <th class="py-2 px-2">综合得分</th>
+                    <th class="py-2 px-2">科研进账</th>
+                    <th class="py-2 px-2">去向落实率</th>
+                    <th class="py-2 px-2">预算执行</th>
+                    <th class="py-2 px-3 rounded-r text-right">状态 / 穿透</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-800">
+                  <tr class="hover:bg-slate-800/40 cursor-pointer transition-colors" onclick="openCollegeModal('材料科学与工程学院')">
+                    <td class="py-2.5 px-3 font-medium text-white flex items-center">
+                      <span class="w-4 h-4 bg-amber-500/20 text-amber-400 rounded text-[10px] flex items-center justify-center mr-2 font-mono">1</span>
+                      材料科学与工程学院
+                    </td>
+                    <td class="py-2.5 px-2 text-emerald-400 font-bold font-mono">96.8</td>
+                    <td class="py-2.5 px-2 font-mono">2.42 亿</td>
+                    <td class="py-2.5 px-2 font-mono">94.2%</td>
+                    <td class="py-2.5 px-2 text-emerald-400 font-mono">86.5%</td>
+                    <td class="py-2.5 px-3 text-right">
+                      <span class="text-blue-400 hover:text-blue-300 underline text-[11px]">穿透分析 ➔</span>
+                    </td>
+                  </tr>
+                  <tr class="hover:bg-slate-800/40 cursor-pointer transition-colors" onclick="openCollegeModal('化学与分子工程学院')">
+                    <td class="py-2.5 px-3 font-medium text-white flex items-center">
+                      <span class="w-4 h-4 bg-amber-500/20 text-amber-400 rounded text-[10px] flex items-center justify-center mr-2 font-mono">2</span>
+                      化学与分子工程学院
+                    </td>
+                    <td class="py-2.5 px-2 text-emerald-400 font-bold font-mono">94.5</td>
+                    <td class="py-2.5 px-2 font-mono">2.18 亿</td>
+                    <td class="py-2.5 px-2 font-mono">93.1%</td>
+                    <td class="py-2.5 px-2 text-emerald-400 font-mono">82.1%</td>
+                    <td class="py-2.5 px-3 text-right">
+                      <span class="text-blue-400 hover:text-blue-300 underline text-[11px]">穿透分析 ➔</span>
+                    </td>
+                  </tr>
+                  <tr class="hover:bg-slate-800/40 cursor-pointer transition-colors" onclick="openCollegeModal('人工智能与计算机学院')">
+                    <td class="py-2.5 px-3 font-medium text-white flex items-center">
+                      <span class="w-4 h-4 bg-slate-700 text-slate-300 rounded text-[10px] flex items-center justify-center mr-2 font-mono">3</span>
+                      人工智能与计算机学院
+                    </td>
+                    <td class="py-2.5 px-2 text-blue-400 font-bold font-mono">89.2</td>
+                    <td class="py-2.5 px-2 font-mono">1.85 亿</td>
+                    <td class="py-2.5 px-2 text-rose-400 font-mono font-bold">78.4% ⚠️</td>
+                    <td class="py-2.5 px-2 text-emerald-400 font-mono">79.0%</td>
+                    <td class="py-2.5 px-3 text-right">
+                      <span class="text-rose-400 hover:text-rose-300 underline text-[11px]">重点关注 ➔</span>
+                    </td>
+                  </tr>
+                  <tr class="hover:bg-slate-800/40 cursor-pointer transition-colors" onclick="openCollegeModal('机械与动力工程学院')">
+                    <td class="py-2.5 px-3 font-medium text-white flex items-center">
+                      <span class="w-4 h-4 bg-slate-700 text-slate-300 rounded text-[10px] flex items-center justify-center mr-2 font-mono">4</span>
+                      机械与动力工程学院
+                    </td>
+                    <td class="py-2.5 px-2 text-blue-400 font-bold font-mono">87.6</td>
+                    <td class="py-2.5 px-2 font-mono">1.62 亿</td>
+                    <td class="py-2.5 px-2 font-mono">91.8%</td>
+                    <td class="py-2.5 px-2 text-amber-400 font-mono">61.2%</td>
+                    <td class="py-2.5 px-3 text-right">
+                      <span class="text-blue-400 hover:text-blue-300 underline text-[11px]">穿透分析 ➔</span>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right: Early Warning & Leadership Dispatch Station (3 Cols) -->
+        <div class="lg:col-span-3 space-y-5">
+          
+          <!-- Dispatch & Warning Center Card -->
+          <div class="bg-panel border border-panel-border rounded-xl p-4">
+            <div class="flex items-center justify-between mb-3">
+              <div class="flex items-center space-x-2">
+                <span class="w-2.5 h-2.5 rounded-full bg-rose-500 animate-ping"></span>
+                <h3 class="font-semibold text-sm text-slate-200">红黄绿灯督办台 (4项待办)</h3>
+              </div>
+              <span class="text-[11px] text-rose-400 bg-rose-500/10 px-2 py-0.5 rounded border border-rose-500/20 font-medium">高优先级</span>
+            </div>
+
+            <!-- Warning items -->
+            <div class="space-y-2.5">
+              
+              <!-- Warning 1: Red -->
+              <div class="p-2.5 rounded-lg bg-rose-950/30 border border-rose-800/50 hover:bg-rose-950/50 transition-colors">
+                <div class="flex items-start justify-between">
+                  <div class="flex items-center space-x-1.5 text-rose-400 text-xs font-semibold">
+                    <i data-lucide="alert-circle" class="w-3.5 h-3.5"></i>
+                    <span>[就业] 计算机学院落实率偏缓</span>
+                  </div>
+                  <span class="text-[10px] px-1.5 bg-rose-900/60 text-rose-300 rounded font-mono">落后8.2%</span>
+                </div>
+                <p class="text-[11px] text-slate-400 mt-1 leading-relaxed">
+                  2026届初次毕业去向率当前仅78.4%，低于工科平均线(86.6%)，IT大厂春招缩招明显。
+                </p>
+                <div class="mt-2 flex items-center justify-between pt-1 border-t border-rose-900/40">
+                  <span class="text-[10px] text-slate-500">建议分管: 教学/学工副校长</span>
+                  <button onclick="openDispatchModal('督促计算机学院推进春招专场招聘会与一对一帮扶', '教学校长')" class="px-2 py-0.5 bg-rose-600 hover:bg-rose-500 text-white rounded text-[11px] font-medium">
+                    一键批示督办
+                  </button>
+                </div>
+              </div>
+
+              <!-- Warning 2: Amber -->
+              <div class="p-2.5 rounded-lg bg-amber-950/30 border border-amber-800/50 hover:bg-amber-950/50 transition-colors">
+                <div class="flex items-start justify-between">
+                  <div class="flex items-center space-x-1.5 text-amber-400 text-xs font-semibold">
+                    <i data-lucide="clock-alert" class="w-3.5 h-3.5"></i>
+                    <span>[财务] 人工智能研究院预算滞后</span>
+                  </div>
+                  <span class="text-[10px] px-1.5 bg-amber-900/60 text-amber-300 rounded font-mono">执行率31%</span>
+                </div>
+                <p class="text-[11px] text-slate-400 mt-1 leading-relaxed">
+                  大额GPU算力集群设备采购招投标延误，若10月底未完成，存在财政存量资金收回风险。
+                </p>
+                <div class="mt-2 flex items-center justify-between pt-1 border-t border-amber-900/40">
+                  <span class="text-[10px] text-slate-500">建议分管: 财务副校长</span>
+                  <button onclick="openDispatchModal('加快GPU算力集群招标执行，防范年底资金回收', '财务校长')" class="px-2 py-0.5 bg-amber-600 hover:bg-amber-500 text-white rounded text-[11px] font-medium">
+                    下发催办单
+                  </button>
+                </div>
+              </div>
+
+              <!-- Warning 3: Amber -->
+              <div class="p-2.5 rounded-lg bg-slate-800/60 border border-slate-700/60 hover:bg-slate-800 transition-colors">
+                <div class="flex items-start justify-between">
+                  <div class="flex items-center space-x-1.5 text-sky-400 text-xs font-semibold">
+                    <i data-lucide="shield-alert" class="w-3.5 h-3.5"></i>
+                    <span>[安全] 重点实验室危化品临期</span>
+                  </div>
+                  <span class="text-[10px] px-1.5 bg-sky-900/60 text-sky-300 rounded font-mono">3批待处置</span>
+                </div>
+                <p class="text-[11px] text-slate-400 mt-1 leading-relaxed">
+                  药学院4号实验楼有机溶剂废液存放周期超28天，已通知环保清运专车入校。
+                </p>
+                <div class="mt-2 flex items-center justify-between pt-1 border-t border-slate-700/40">
+                  <span class="text-[10px] text-slate-500">分管: 资产与后勤处</span>
+                  <span class="text-[11px] text-emerald-400 font-medium">清运中 (95%)</span>
+                </div>
+              </div>
+
+            </div>
+          </div>
+
+          <!-- Leadership Decision Assistant AI Suggestions -->
+          <div class="bg-gradient-to-br from-blue-950/40 via-panel to-indigo-950/30 border border-blue-800/40 rounded-xl p-4">
+            <div class="flex items-center space-x-2 text-blue-400 text-xs font-semibold mb-2">
+              <i data-lucide="sparkles" class="w-4 h-4"></i>
+              <span>AI校务决策辅助洞察</span>
+            </div>
+            <p class="text-xs text-slate-300 leading-relaxed">
+              基于近5年数据推演：本年度若持续增加对“新能源材料与低碳技术”团队的横向成果转化支持，预计可在第六轮学科评估中助推材料科学跻身前 <b class="text-emerald-400">2%</b>。
+            </p>
+            <div class="mt-3 flex items-center justify-between text-[11px]">
+              <span class="text-slate-400">数据置信度: 94.2%</span>
+              <button onclick="alert('已生成《华东科技大学新能源交叉学科布局决策推演报告》并发送至校领导办公邮箱。')" class="text-blue-400 hover:text-blue-300 underline">调取推演报告 ➔</button>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+
+
+    <!-- ========================================================================= -->
+    <!-- TAB 2: 教学与人才培养 (分管教学校长) -->
+    <!-- ========================================================================= -->
+    <div id="tab-education" class="tab-pane hidden space-y-5">
+      <!-- Row 1: Key Metrics -->
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div class="bg-panel border border-panel-border rounded-xl p-4">
+          <div class="text-slate-400 text-xs">2026年本科招生报到率</div>
+          <div class="text-2xl font-bold font-mono text-white mt-1">99.42%</div>
+          <div class="text-[11px] text-emerald-400 mt-1">省外一本/特控线平均超分: +64.5 分</div>
+        </div>
+        <div class="bg-panel border border-panel-border rounded-xl p-4">
+          <div class="text-slate-400 text-xs">在校生学分绩点(GPA)均值</div>
+          <div class="text-2xl font-bold font-mono text-white mt-1">3.38</div>
+          <div class="text-[11px] text-slate-400 mt-1">学业预警(挂科≥3门): 142人 (占比0.58%)</div>
+        </div>
+        <div class="bg-panel border border-panel-border rounded-xl p-4">
+          <div class="text-slate-400 text-xs">2026届总体毕业去向落实率</div>
+          <div class="text-2xl font-bold font-mono text-white mt-1">88.6%</div>
+          <div class="text-[11px] text-emerald-400 mt-1">国内升学率: 39.2% • 海外留学: 8.5%</div>
+        </div>
+        <div class="bg-panel border border-panel-border rounded-xl p-4">
+          <div class="text-slate-400 text-xs">国家级一流本科专业 / 金课</div>
+          <div class="text-2xl font-bold font-mono text-white mt-1">42 个 / 68 门</div>
+          <div class="text-[11px] text-sky-400 mt-1">工程教育认证专业全覆盖率: 88%</div>
+        </div>
+      </div>
+
+      <!-- Row 2: Charts -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-5">
+        <!-- Employment Rate Ranking by College -->
+        <div class="lg:col-span-7 bg-panel border border-panel-border rounded-xl p-4">
+          <div class="flex items-center justify-between mb-3">
+            <h3 class="font-semibold text-sm text-slate-200">各二级学院2026届毕业去向落实率与升学率排行</h3>
+            <span class="text-xs text-slate-400">红色虚线为全校平均线(88.6%)</span>
+          </div>
+          <div id="chart-edu-employment" class="w-full h-80"></div>
+        </div>
+
+        <!-- Admissions Quality by Province Map/Bar -->
+        <div class="lg:col-span-5 bg-panel border border-panel-border rounded-xl p-4">
+          <div class="flex items-center justify-between mb-3">
+            <h3 class="font-semibold text-sm text-slate-200">重点生源省份高考录取位次与超线均值</h3>
+            <span class="text-xs text-blue-400">优质生源基地: 220所</span>
+          </div>
+          <div id="chart-edu-admissions" class="w-full h-80"></div>
+        </div>
+      </div>
+
+      <!-- Row 3: Teaching Quality & Fail Rate Warning Table -->
+      <div class="bg-panel border border-panel-border rounded-xl p-4">
+        <div class="flex items-center justify-between mb-3">
+          <div class="flex items-center space-x-2">
+            <span class="w-2 h-4 bg-rose-500 rounded-sm"></span>
+            <h3 class="font-semibold text-sm text-slate-200">学业异常与大面积挂科课程监管表 (挂科率 > 25% 重点监测)</h3>
+          </div>
+          <button onclick="openDispatchModal('要求教务处组织对挂科率异常基础课程开展集体教研和辅导', '教学校长')" class="text-xs text-blue-400 hover:underline">督促集体教研辅导</button>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-xs text-slate-300">
+            <thead class="bg-slate-800/80 text-slate-400">
+              <tr>
+                <th class="py-2.5 px-3">课程名称</th>
+                <th class="py-2.5 px-2">开课学院</th>
+                <th class="py-2.5 px-2">修读人数</th>
+                <th class="py-2.5 px-2">平均分</th>
+                <th class="py-2.5 px-2">挂科率</th>
+                <th class="py-2.5 px-2">评教分数</th>
+                <th class="py-2.5 px-3">历史同期对比</th>
+                <th class="py-2.5 px-3 text-right">预警级别</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-800">
+              <tr class="hover:bg-slate-800/30">
+                <td class="py-2.5 px-3 font-medium text-white">大学物理 (工科类) II</td>
+                <td class="py-2.5 px-2">理学院</td>
+                <td class="py-2.5 px-2 font-mono">1,480</td>
+                <td class="py-2.5 px-2 font-mono">68.2</td>
+                <td class="py-2.5 px-2 text-rose-400 font-bold font-mono">31.4%</td>
+                <td class="py-2.5 px-2 font-mono">87.5</td>
+                <td class="py-2.5 px-3 text-rose-400">+4.2% ↑</td>
+                <td class="py-2.5 px-3 text-right"><span class="px-2 py-0.5 bg-rose-950 text-rose-400 border border-rose-800 rounded">红色预警</span></td>
+              </tr>
+              <tr class="hover:bg-slate-800/30">
+                <td class="py-2.5 px-3 font-medium text-white">高等数学 (卓越工程师班) I</td>
+                <td class="py-2.5 px-2">数学学院</td>
+                <td class="py-2.5 px-2 font-mono">2,100</td>
+                <td class="py-2.5 px-2 font-mono">71.0</td>
+                <td class="py-2.5 px-2 text-amber-400 font-bold font-mono">26.8%</td>
+                <td class="py-2.5 px-2 font-mono">91.2</td>
+                <td class="py-2.5 px-3 text-emerald-400">-1.8% ↓</td>
+                <td class="py-2.5 px-3 text-right"><span class="px-2 py-0.5 bg-amber-950 text-amber-400 border border-amber-800 rounded">黄色关注</span></td>
+              </tr>
+              <tr class="hover:bg-slate-800/30">
+                <td class="py-2.5 px-3 font-medium text-white">信号与系统</td>
+                <td class="py-2.5 px-2">信息学院</td>
+                <td class="py-2.5 px-2 font-mono">680</td>
+                <td class="py-2.5 px-2 font-mono">72.4</td>
+                <td class="py-2.5 px-2 text-amber-400 font-bold font-mono">25.3%</td>
+                <td class="py-2.5 px-2 font-mono">89.0</td>
+                <td class="py-2.5 px-3 text-rose-400">+2.1% ↑</td>
+                <td class="py-2.5 px-3 text-right"><span class="px-2 py-0.5 bg-amber-950 text-amber-400 border border-amber-800 rounded">黄色关注</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+
+    <!-- ========================================================================= -->
+    <!-- TAB 3: 学科与科学研究 (分管科研/学科校长) -->
+    <!-- ========================================================================= -->
+    <div id="tab-research" class="tab-pane hidden space-y-5">
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div class="bg-panel border border-panel-border rounded-xl p-4">
+          <div class="text-slate-400 text-xs">2026年累计科研进账总额</div>
+          <div class="text-2xl font-bold font-mono text-white mt-1">14.82 亿元</div>
+          <div class="text-[11px] text-emerald-400 mt-1">同比去年同期 +12.6% (目标完成率 82.3%)</div>
+        </div>
+        <div class="bg-panel border border-panel-border rounded-xl p-4">
+          <div class="text-slate-400 text-xs">国家自然/社科科学基金立项</div>
+          <div class="text-2xl font-bold font-mono text-white mt-1">236 项</div>
+          <div class="text-[11px] text-violet-400 mt-1">国家杰青/优青/重点研发立项: 18项</div>
+        </div>
+        <div class="bg-panel border border-panel-border rounded-xl p-4">
+          <div class="text-slate-400 text-xs">ESI 全球前 1% 学科数</div>
+          <div class="text-2xl font-bold font-mono text-white mt-1">8 个学科</div>
+          <div class="text-[11px] text-emerald-400 mt-1">材料科学(1.2‰)、化学(1.8‰)已逼近前1‰</div>
+        </div>
+        <div class="bg-panel border border-panel-border rounded-xl p-4">
+          <div class="text-slate-400 text-xs">专利成果转化与技术转让额</div>
+          <div class="text-2xl font-bold font-mono text-white mt-1">3.65 亿元</div>
+          <div class="text-[11px] text-sky-400 mt-1">高价值发明专利授权: 620件 (作价入股企业4家)</div>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-5">
+        <!-- Monthly Longitudinal vs Horizontal Research Funds -->
+        <div class="lg:col-span-7 bg-panel border border-panel-border rounded-xl p-4">
+          <div class="flex items-center justify-between mb-3">
+            <h3 class="font-semibold text-sm text-slate-200">科研经费进账结构走势 (纵向国家级基金 vs 横向企事业合作)</h3>
+            <span class="text-xs text-slate-400">单位: 亿元</span>
+          </div>
+          <div id="chart-res-funds" class="w-full h-80"></div>
+        </div>
+
+        <!-- ESI Discipline Gap Analysis -->
+        <div class="lg:col-span-5 bg-panel border border-panel-border rounded-xl p-4">
+          <div class="flex items-center justify-between mb-3">
+            <h3 class="font-semibold text-sm text-slate-200">重点潜力学科 ESI 前1% 距离阈值缺口监控</h3>
+            <span class="text-xs text-violet-400">双一流培育梯队</span>
+          </div>
+          <div id="chart-res-esi" class="w-full h-80"></div>
+        </div>
+      </div>
+
+      <!-- High-level Talent Research Projects Milestone -->
+      <div class="bg-panel border border-panel-border rounded-xl p-4">
+        <h3 class="font-semibold text-sm text-slate-200 mb-3">2026年度千万级重大科技攻坚项目进行时</h3>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
+          <div class="bg-panel-sub p-3 rounded-lg border border-slate-800">
+            <div class="flex items-center justify-between text-slate-300 font-medium">
+              <span>新型钙钛矿光伏电池关键材料</span>
+              <span class="text-emerald-400 font-mono">3,200万元</span>
+            </div>
+            <p class="text-slate-400 mt-1 text-[11px]">牵头人: 材料学院 院士团队 • 科技部重大专项</p>
+            <div class="mt-2 w-full bg-slate-800 h-1.5 rounded-full">
+              <div class="bg-emerald-500 h-full rounded-full" style="width: 75%"></div>
+            </div>
+            <div class="flex justify-between text-[10px] text-slate-500 mt-1">
+              <span>中期检查已通过</span>
+              <span>进度 75%</span>
+            </div>
+          </div>
+
+          <div class="bg-panel-sub p-3 rounded-lg border border-slate-800">
+            <div class="flex items-center justify-between text-slate-300 font-medium">
+              <span>智能工业边缘控制芯片系统</span>
+              <span class="text-blue-400 font-mono">2,100万元</span>
+            </div>
+            <p class="text-slate-400 mt-1 text-[11px]">牵头人: 计算机学院 杰青团队 • 省重大科技攻关</p>
+            <div class="mt-2 w-full bg-slate-800 h-1.5 rounded-full">
+              <div class="bg-blue-500 h-full rounded-full" style="width: 60%"></div>
+            </div>
+            <div class="flex justify-between text-[10px] text-slate-500 mt-1">
+              <span>完成流片验证</span>
+              <span>进度 60%</span>
+            </div>
+          </div>
+
+          <div class="bg-panel-sub p-3 rounded-lg border border-slate-800">
+            <div class="flex items-center justify-between text-slate-300 font-medium">
+              <span>靶向抗肿瘤创新药物合成关键工艺</span>
+              <span class="text-amber-400 font-mono">4,500万元</span>
+            </div>
+            <p class="text-slate-400 mt-1 text-[11px]">牵头人: 药学院 领军人才 • 企业联合研发转化</p>
+            <div class="mt-2 w-full bg-slate-800 h-1.5 rounded-full">
+              <div class="bg-amber-500 h-full rounded-full" style="width: 85%"></div>
+            </div>
+            <div class="flex justify-between text-[10px] text-slate-500 mt-1">
+              <span>临床I期推进</span>
+              <span>进度 85%</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+
+    <!-- ========================================================================= -->
+    <!-- TAB 4: 师资队伍与人事 (分管人事副校长) -->
+    <!-- ========================================================================= -->
+    <div id="tab-faculty" class="tab-pane hidden space-y-5">
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div class="bg-panel border border-panel-border rounded-xl p-4">
+          <div class="text-slate-400 text-xs">专任教师总数</div>
+          <div class="text-2xl font-bold font-mono text-white mt-1">2,480 人</div>
+          <div class="text-[11px] text-emerald-400 mt-1">生师比 16.8:1 (优于教育部合格标准 18:1)</div>
+        </div>
+        <div class="bg-panel border border-panel-border rounded-xl p-4">
+          <div class="text-slate-400 text-xs">专任教师博士学位占比</div>
+          <div class="text-2xl font-bold font-mono text-white mt-1">89.4%</div>
+          <div class="text-[11px] text-slate-400 mt-1">海外名校学缘经历占比: 41.2%</div>
+        </div>
+        <div class="bg-panel border border-panel-border rounded-xl p-4">
+          <div class="text-slate-400 text-xs">2026年高层次人才全职引进</div>
+          <div class="text-2xl font-bold font-mono text-white mt-1">38 人</div>
+          <div class="text-[11px] text-sky-400 mt-1">国家级领军 6人 • 青年拔尖 32人</div>
+        </div>
+        <div class="bg-panel border border-panel-border rounded-xl p-4">
+          <div class="text-slate-400 text-xs">高层次人才流失率 (近12个月)</div>
+          <div class="text-2xl font-bold font-mono text-emerald-400 mt-1">1.2% (极低)</div>
+          <div class="text-[11px] text-slate-400 mt-1">离职/调离主要为正常退休返聘</div>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-5">
+        <!-- Faculty Age and Title Pyramid -->
+        <div class="lg:col-span-6 bg-panel border border-panel-border rounded-xl p-4">
+          <div class="flex items-center justify-between mb-3">
+            <h3 class="font-semibold text-sm text-slate-200">教师年龄梯次分布与职称金字塔画像</h3>
+            <span class="text-xs text-slate-400">重点关注35岁以下青年骨干</span>
+          </div>
+          <div id="chart-faculty-pyramid" class="w-full h-80"></div>
+        </div>
+
+        <!-- Talent Recruitment by Discipline -->
+        <div class="lg:col-span-6 bg-panel border border-panel-border rounded-xl p-4">
+          <div class="flex items-center justify-between mb-3">
+            <h3 class="font-semibold text-sm text-slate-200">各大学部高层次人才集聚与聘期达标率</h3>
+            <span class="text-xs text-emerald-400">聘期考核达标率: 92.8%</span>
+          </div>
+          <div id="chart-faculty-talent" class="w-full h-80"></div>
+        </div>
+      </div>
+
+      <!-- Warning note for student-teacher ratio -->
+      <div class="bg-panel border border-panel-border rounded-xl p-4">
+        <h3 class="font-semibold text-sm text-slate-200 mb-2">学院生师比红黄线动态监管</h3>
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
+          <div class="p-3 bg-panel-sub rounded-lg border border-slate-800">
+            <div class="text-slate-400">文法与公共管理学院</div>
+            <div class="text-base font-bold font-mono text-rose-400 mt-1">21.4 : 1 ⚠️</div>
+            <div class="text-[10px] text-rose-400 mt-0.5">超出警戒红线(20:1)，建议下半年增加编制招聘</div>
+          </div>
+          <div class="p-3 bg-panel-sub rounded-lg border border-slate-800">
+            <div class="text-slate-400">计算机与大数据学院</div>
+            <div class="text-base font-bold font-mono text-amber-400 mt-1">19.2 : 1</div>
+            <div class="text-[10px] text-amber-400 mt-0.5">生源扩招较快，接近预警线</div>
+          </div>
+          <div class="p-3 bg-panel-sub rounded-lg border border-slate-800">
+            <div class="text-slate-400">材料科学与工程学院</div>
+            <div class="text-base font-bold font-mono text-emerald-400 mt-1">13.5 : 1</div>
+            <div class="text-[10px] text-emerald-400 mt-0.5">师资力量雄厚，科研梯队充裕</div>
+          </div>
+          <div class="p-3 bg-panel-sub rounded-lg border border-slate-800">
+            <div class="text-slate-400">化学与生命科学学院</div>
+            <div class="text-base font-bold font-mono text-emerald-400 mt-1">14.1 : 1</div>
+            <div class="text-[10px] text-emerald-400 mt-0.5">梯队健康，博士后流动站充足</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+
+    <!-- ========================================================================= -->
+    <!-- TAB 5: 财务资产与设备 (分管财务/资产副校长) -->
+    <!-- ========================================================================= -->
+    <div id="tab-finance" class="tab-pane hidden space-y-5">
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div class="bg-panel border border-panel-border rounded-xl p-4">
+          <div class="text-slate-400 text-xs">2026全校预算总盘</div>
+          <div class="text-2xl font-bold font-mono text-white mt-1">48.65 亿元</div>
+          <div class="text-[11px] text-amber-400 mt-1">总体执行进度: 68.4% (时序标杆: 72.5%)</div>
+        </div>
+        <div class="bg-panel border border-panel-border rounded-xl p-4">
+          <div class="text-slate-400 text-xs">科研存量沉淀资金</div>
+          <div class="text-2xl font-bold font-mono text-white mt-1">6.24 亿元</div>
+          <div class="text-[11px] text-slate-400 mt-1">结题超2年待清理资金: 4,200万元</div>
+        </div>
+        <div class="bg-panel border border-panel-border rounded-xl p-4">
+          <div class="text-slate-400 text-xs">大型贵重仪器(≥40万)共享机时</div>
+          <div class="text-2xl font-bold font-mono text-white mt-1">1,420 小时/年</div>
+          <div class="text-[11px] text-emerald-400 mt-1">共享使用率达 84.6% (校外开放创收1,800万)</div>
+        </div>
+        <div class="bg-panel border border-panel-border rounded-xl p-4">
+          <div class="text-slate-400 text-xs">全校公用房定额使用合规率</div>
+          <div class="text-2xl font-bold font-mono text-white mt-1">94.8%</div>
+          <div class="text-[11px] text-sky-400 mt-1">超标办公及实验用房清理腾退: 2,400㎡</div>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-5">
+        <!-- Budget Execution Progress Bar Chart by Department -->
+        <div class="lg:col-span-8 bg-panel border border-panel-border rounded-xl p-4">
+          <div class="flex items-center justify-between mb-3">
+            <h3 class="font-semibold text-sm text-slate-200">各二级学院与职能部门预算执行率横向排行 (警惕财政资金收回风险)</h3>
+            <span class="text-xs text-rose-400 font-mono">低于55%标红警告</span>
+          </div>
+          <div id="chart-fin-budget" class="w-full h-84"></div>
+        </div>
+
+        <!-- Income & Expense Distribution -->
+        <div class="lg:col-span-4 bg-panel border border-panel-border rounded-xl p-4">
+          <div class="flex items-center justify-between mb-3">
+            <h3 class="font-semibold text-sm text-slate-200">2026年全校综合支出结构</h3>
+            <span class="text-xs text-slate-400">总支出 33.27 亿</span>
+          </div>
+          <div id="chart-fin-expenses" class="w-full h-84"></div>
+        </div>
+      </div>
+
+      <!-- Large Instrument Idle Warning Table -->
+      <div class="bg-panel border border-panel-border rounded-xl p-4">
+        <div class="flex items-center justify-between mb-3">
+          <h3 class="font-semibold text-sm text-slate-200">大型贵重仪器设备使用率低于50%预警清单</h3>
+          <span class="text-xs text-slate-400">依据物联网智能插座及预约平台实时机时数据</span>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-xs text-slate-300">
+            <thead class="bg-slate-800/80 text-slate-400">
+              <tr>
+                <th class="py-2.5 px-3">设备名称</th>
+                <th class="py-2.5 px-2">购置原值</th>
+                <th class="py-2.5 px-2">所属学院/平台</th>
+                <th class="py-2.5 px-2">近半年开机时数</th>
+                <th class="py-2.5 px-2">使用利用率</th>
+                <th class="py-2.5 px-3 text-right">处置方案</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-800">
+              <tr class="hover:bg-slate-800/30">
+                <td class="py-2 px-3 font-medium text-white">高分辨场发射透射电子显微镜 (TEM)</td>
+                <td class="py-2 px-2 font-mono">480 万元</td>
+                <td class="py-2 px-2">微纳制造中心</td>
+                <td class="py-2 px-2 font-mono">186 小时</td>
+                <td class="py-2 px-2 text-rose-400 font-bold font-mono">23.2% ⚠️</td>
+                <td class="py-2 px-3 text-right"><span class="text-blue-400 hover:underline cursor-pointer" onclick="openDispatchModal('要求微纳中心开放TEM面向全校跨学科共享并设定考核指标', '资产副校长')">强制纳入校级共享平台 ➔</span></td>
+              </tr>
+              <tr class="hover:bg-slate-800/30">
+                <td class="py-2 px-3 font-medium text-white">超高效液相色谱-三重四极杆质谱联用仪</td>
+                <td class="py-2 px-2 font-mono">220 万元</td>
+                <td class="py-2 px-2">药学院分析测试室</td>
+                <td class="py-2 px-2 font-mono">310 小时</td>
+                <td class="py-2 px-2 text-amber-400 font-bold font-mono">38.7%</td>
+                <td class="py-2 px-3 text-right"><span class="text-blue-400 hover:underline cursor-pointer" onclick="openDispatchModal('质谱联用仪机时利用偏低，加快实验员跨团队培训', '资产副校长')">限期提高机时 ➔</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+
+    <!-- ========================================================================= -->
+    <!-- TAB 6: 学生发展与思政 (分管学工副书记/副校长) -->
+    <!-- ========================================================================= -->
+    <div id="tab-student" class="tab-pane hidden space-y-5">
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div class="bg-panel border border-panel-border rounded-xl p-4">
+          <div class="text-slate-400 text-xs">心理关爱重点库 (高危等级闭环)</div>
+          <div class="text-2xl font-bold font-mono text-white mt-1">42 人</div>
+          <div class="text-[11px] text-emerald-400 mt-1">100% 辅导员一对一建档干预闭环</div>
+        </div>
+        <div class="bg-panel border border-panel-border rounded-xl p-4">
+          <div class="text-slate-400 text-xs">连续48小时未归宿/轨迹异常预警</div>
+          <div class="text-2xl font-bold font-mono text-rose-400 mt-1">3 人</div>
+          <div class="text-[11px] text-slate-400 mt-1">门禁与蓝牙道闸轨迹联动筛查 (已在核实)</div>
+        </div>
+        <div class="bg-panel border border-panel-border rounded-xl p-4">
+          <div class="text-slate-400 text-xs">家庭经济困难生精准资助发放率</div>
+          <div class="text-2xl font-bold font-mono text-white mt-1">99.8%</div>
+          <div class="text-[11px] text-sky-400 mt-1">资助金额 3,840 万元 • 隐形餐补直达饭卡</div>
+        </div>
+        <div class="bg-panel border border-panel-border rounded-xl p-4">
+          <div class="text-slate-400 text-xs">专职辅导员师生配比</div>
+          <div class="text-2xl font-bold font-mono text-white mt-1">1 : 185</div>
+          <div class="text-[11px] text-emerald-400 mt-1">优于国家规定 1:200 红线标准</div>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-5">
+        <!-- Mental Health Distribution -->
+        <div class="lg:col-span-6 bg-panel border border-panel-border rounded-xl p-4">
+          <div class="flex items-center justify-between mb-3">
+            <h3 class="font-semibold text-sm text-slate-200">各年级学业压力与心理危机交叉风险研判</h3>
+            <span class="text-xs text-slate-400">大二、研二为高频波动期</span>
+          </div>
+          <div id="chart-stu-psych" class="w-full h-80"></div>
+        </div>
+
+        <!-- Student Attendance / Card Consumption Anomaly -->
+        <div class="lg:col-span-6 bg-panel border border-panel-border rounded-xl p-4">
+          <div class="flex items-center justify-between mb-3">
+            <h3 class="font-semibold text-sm text-slate-200">校园网/一卡通/门禁异常波动感知</h3>
+            <span class="text-xs text-emerald-400">AI离群点智能检测</span>
+          </div>
+          <div id="chart-stu-anomaly" class="w-full h-80"></div>
+        </div>
+      </div>
+
+      <!-- Real-time Student Intervention Trace -->
+      <div class="bg-panel border border-panel-border rounded-xl p-4">
+        <h3 class="font-semibold text-sm text-slate-200 mb-3">今日实时学生异常行为及核查处置日志</h3>
+        <div class="space-y-2 text-xs">
+          <div class="p-2.5 bg-panel-sub rounded-lg border border-slate-800 flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+              <span class="w-2 h-2 rounded-full bg-rose-500"></span>
+              <span class="font-mono text-slate-400">07:45:12</span>
+              <span class="text-slate-200 font-medium">[失联预警] 外国语学院 2024级本科生李同学连续48小时无宿舍门禁刷卡记录</span>
+            </div>
+            <div class="flex items-center space-x-2">
+              <span class="text-emerald-400">辅导员已电话确认：因病请假回家就医 (已补办假条)</span>
+              <span class="px-1.5 py-0.5 bg-emerald-950 text-emerald-400 border border-emerald-800 rounded">已闭环</span>
+            </div>
+          </div>
+          <div class="p-2.5 bg-panel-sub rounded-lg border border-slate-800 flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+              <span class="w-2 h-2 rounded-full bg-amber-500"></span>
+              <span class="font-mono text-slate-400">06:30:20</span>
+              <span class="text-slate-200 font-medium">[消费异常] 信息学院研究生王同学近7日日均餐费低于3元，AI触发隐形资助筛查</span>
+            </div>
+            <div class="flex items-center space-x-2">
+              <span class="text-amber-400">已推送资助中心，纳入无感爱心餐补资助库 (充值300元)</span>
+              <span class="px-1.5 py-0.5 bg-blue-950 text-blue-400 border border-blue-800 rounded">处理中</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+
+    <!-- ========================================================================= -->
+    <!-- TAB 7: 智慧后勤与大安全 (分管安全/后勤副校长) -->
+    <!-- ========================================================================= -->
+    <div id="tab-security" class="tab-pane hidden space-y-5">
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div class="bg-panel border border-panel-border rounded-xl p-4">
+          <div class="text-slate-400 text-xs">全校安防摄像头在线率</div>
+          <div class="text-2xl font-bold font-mono text-white mt-1">99.82%</div>
+          <div class="text-[11px] text-emerald-400 mt-1">在线 4,820 台 / 离线 9 台 (报修中)</div>
+        </div>
+        <div class="bg-panel border border-panel-border rounded-xl p-4">
+          <div class="text-slate-400 text-xs">重点危化品智能试剂柜受控率</div>
+          <div class="text-2xl font-bold font-mono text-emerald-400 mt-1">100%</div>
+          <div class="text-[11px] text-slate-400 mt-1">双人双锁 + 人脸识别领用，无异常超量</div>
+        </div>
+        <div class="bg-panel border border-panel-border rounded-xl p-4">
+          <div class="text-slate-400 text-xs">全校消防水网管压实时健康度</div>
+          <div class="text-2xl font-bold font-mono text-white mt-1">0.42 MPa</div>
+          <div class="text-[11px] text-emerald-400 mt-1">压力正常 (消火栓网覆盖率 100%)</div>
+        </div>
+        <div class="bg-panel border border-panel-border rounded-xl p-4">
+          <div class="text-slate-400 text-xs">全校当日综合用电负荷</div>
+          <div class="text-2xl font-bold font-mono text-white mt-1">84,200 kWh</div>
+          <div class="text-[11px] text-sky-400 mt-1">绿色节能较基准月下降 6.4%</div>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-5">
+        <!-- Energy & Water Consumption Trend -->
+        <div class="lg:col-span-7 bg-panel border border-panel-border rounded-xl p-4">
+          <div class="flex items-center justify-between mb-3">
+            <h3 class="font-semibold text-sm text-slate-200">全校近30天能源消耗 (电/水) 与激增异常告警点</h3>
+            <span class="text-xs text-slate-400">单位: 万度 / 万吨</span>
+          </div>
+          <div id="chart-sec-energy" class="w-full h-80"></div>
+        </div>
+
+        <!-- Campus Safety Heatmap / Status -->
+        <div class="lg:col-span-5 bg-panel border border-panel-border rounded-xl p-4">
+          <div class="flex items-center justify-between mb-3">
+            <h3 class="font-semibold text-sm text-slate-200">重点区域人流聚集热力与交通道闸态势</h3>
+            <span class="text-xs text-emerald-400">无异常拥挤</span>
+          </div>
+          <div id="chart-sec-crowd" class="w-full h-80"></div>
+        </div>
+      </div>
+
+      <!-- Food & Lab Safety Real-time Check -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div class="bg-panel border border-panel-border rounded-xl p-4">
+          <div class="flex items-center justify-between mb-2">
+            <h4 class="text-xs font-semibold text-slate-200">各校区食堂食品安全与农残快检公示</h4>
+            <span class="text-xs text-emerald-400">合格率 99.8%</span>
+          </div>
+          <div class="space-y-2 text-xs text-slate-300">
+            <div class="flex justify-between p-2 bg-panel-sub rounded border border-slate-800">
+              <span>南湖一餐 (快检 42 批次蔬菜肉品)</span>
+              <span class="text-emerald-400">全部阴性合格 • 留样归档完成</span>
+            </div>
+            <div class="flex justify-between p-2 bg-panel-sub rounded border border-slate-800">
+              <span>普陀教工餐厅 (快检 28 批次)</span>
+              <span class="text-emerald-400">全部阴性合格 • 留样归档完成</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="bg-panel border border-panel-border rounded-xl p-4">
+          <div class="flex items-center justify-between mb-2">
+            <h4 class="text-xs font-semibold text-slate-200">涉校网络安全与舆情态势</h4>
+            <span class="text-xs text-blue-400">全网监测正常</span>
+          </div>
+          <div class="space-y-2 text-xs text-slate-300">
+            <div class="flex justify-between p-2 bg-panel-sub rounded border border-slate-800">
+              <span>互联网涉校正面传播指数</span>
+              <span class="text-emerald-400 font-mono">92.4 (高信誉)</span>
+            </div>
+            <div class="flex justify-between p-2 bg-panel-sub rounded border border-slate-800">
+              <span>防火墙阻截外部网络恶意攻击</span>
+              <span class="text-sky-400 font-mono">今日已拦截 14,290 次</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- ================= MODAL: 学院下钻穿透画像 (DRILLDOWN MODAL) ================= -->
+  <div id="modal-college" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-[#0f172a] border border-slate-700 rounded-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto shadow-2xl p-6 relative">
+      
+      <!-- Close Button -->
+      <button onclick="closeCollegeModal()" class="absolute top-4 right-4 p-2 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800">
+        <i data-lucide="x" class="w-5 h-5"></i>
+      </button>
+
+      <!-- Modal Header -->
+      <div class="flex items-center space-x-3 border-b border-slate-800 pb-4">
+        <div class="w-12 h-12 rounded-xl bg-blue-600/20 text-blue-400 border border-blue-500/30 flex items-center justify-center font-bold text-lg">
+          <i data-lucide="building" class="w-6 h-6"></i>
+        </div>
+        <div>
+          <div class="flex items-center space-x-2">
+            <h2 id="modal-college-title" class="text-xl font-bold text-white">材料科学与工程学院</h2>
+            <span class="px-2 py-0.5 text-xs bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 rounded">A类标杆学院</span>
+          </div>
+          <p class="text-xs text-slate-400 mt-1">院长：张院士 • 党委书记：李书记 • 专任教师：168人 • 在校生：2,450人</p>
+        </div>
+      </div>
+
+      <!-- College Cross-Section 5 Dimensions -->
+      <div class="mt-5 grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div class="bg-panel-sub p-3 rounded-xl border border-slate-800">
+          <div class="text-xs text-slate-400">年度科研进账</div>
+          <div class="text-xl font-bold font-mono text-emerald-400 mt-1">2.42 亿元</div>
+          <div class="text-[11px] text-slate-400 mt-0.5">全校排第 1 名 (超额完成115%)</div>
+        </div>
+        <div class="bg-panel-sub p-3 rounded-xl border border-slate-800">
+          <div class="text-xs text-slate-400">2026届去向落实率</div>
+          <div class="text-xl font-bold font-mono text-white mt-1">94.2%</div>
+          <div class="text-[11px] text-emerald-400 mt-0.5">升学深造率达 62.5%</div>
+        </div>
+        <div class="bg-panel-sub p-3 rounded-xl border border-slate-800">
+          <div class="text-xs text-slate-400">国家级领军人才</div>
+          <div class="text-xl font-bold font-mono text-white mt-1">18 人</div>
+          <div class="text-[11px] text-sky-400 mt-0.5">青年长江/优青: 11人</div>
+        </div>
+        <div class="bg-panel-sub p-3 rounded-xl border border-slate-800">
+          <div class="text-xs text-slate-400">年度预算执行进度</div>
+          <div class="text-xl font-bold font-mono text-amber-400 mt-1">86.5%</div>
+          <div class="text-[11px] text-slate-400 mt-0.5">节奏健康，符合期末安排</div>
+        </div>
+      </div>
+
+      <!-- Detail Chart in Modal -->
+      <div class="mt-5 grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div class="bg-panel-sub p-4 rounded-xl border border-slate-800">
+          <h4 class="text-xs font-semibold text-slate-300 mb-2">学科评估雷达得分 (第五轮A+ ➔ 第六轮预测)</h4>
+          <div id="chart-modal-college-radar" class="w-full h-56"></div>
+        </div>
+        <div class="bg-panel-sub p-4 rounded-xl border border-slate-800">
+          <h4 class="text-xs font-semibold text-slate-300 mb-2">在研国家重大科技专项 (千万级攻坚)</h4>
+          <div class="space-y-2 text-xs">
+            <div class="p-2 bg-slate-900 rounded border border-slate-800">
+              <div class="font-medium text-slate-200">先进轻合金材料国家重点研发计划 (3200万)</div>
+              <div class="text-slate-400 text-[11px] mt-0.5">负责人: 王教授 • 团队研究生 28 人</div>
+            </div>
+            <div class="p-2 bg-slate-900 rounded border border-slate-800">
+              <div class="font-medium text-slate-200">第三代半导体封装基板关键研发 (1800万)</div>
+              <div class="text-slate-400 text-[11px] mt-0.5">负责人: 陈杰青 • 产学研联合转化中</div>
+            </div>
+            <div class="p-2 bg-slate-900 rounded border border-slate-800">
+              <div class="font-medium text-slate-200">超高分子量特种聚合物绿色制造 (1200万)</div>
+              <div class="text-slate-400 text-[11px] mt-0.5">负责人: 刘优青 • 申报发明专利 12 件</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Action Footer -->
+      <div class="mt-6 pt-4 border-t border-slate-800 flex justify-end space-x-3">
+        <button onclick="closeCollegeModal()" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-xs font-medium">关闭</button>
+        <button onclick="openDispatchModal('针对该学院重点重大课题开展现场办公', '科研校长')" class="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-medium">发起校领导现场办公批示</button>
+      </div>
+
+    </div>
+  </div>
+
+
+  <!-- ================= MODAL: 领导一键批示督办通知单 (DISPATCH MODAL) ================= -->
+  <div id="modal-dispatch" class="fixed inset-0 bg-black/75 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-[#0f172a] border border-slate-700 rounded-2xl w-full max-w-lg shadow-2xl p-6 relative">
+      
+      <!-- Close Button -->
+      <button onclick="closeDispatchModal()" class="absolute top-4 right-4 p-2 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800">
+        <i data-lucide="x" class="w-5 h-5"></i>
+      </button>
+
+      <!-- Modal Title -->
+      <div class="flex items-center space-x-3 border-b border-slate-800 pb-3">
+        <div class="w-10 h-10 rounded-lg bg-rose-600/20 text-rose-400 border border-rose-500/30 flex items-center justify-center">
+          <i data-lucide="send" class="w-5 h-5"></i>
+        </div>
+        <div>
+          <h2 class="text-lg font-bold text-white">高校管理闭环 · 校领导重点督办批示单</h2>
+          <p class="text-xs text-slate-400">直通OA办公系统与分管校领导移动端</p>
+        </div>
+      </div>
+
+      <!-- Form Inputs -->
+      <div class="mt-4 space-y-3 text-xs">
+        <div>
+          <label class="block text-slate-400 mb-1">督办事项 / 异动体征</label>
+          <input type="text" id="dispatch-title" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-slate-100 focus:outline-none focus:border-blue-500 font-medium" value="计算机学院毕业去向落实率偏低 (同比落后8.2%)">
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-slate-400 mb-1">承办校领导 / 责任部门</label>
+            <select id="dispatch-recipient" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-slate-100 focus:outline-none focus:border-blue-500">
+              <option value="分管教学校长 / 教务处">分管教学校长 / 教务处</option>
+              <option value="分管科研副校长 / 科研院">分管科研副校长 / 科研院</option>
+              <option value="分管财务副校长 / 财务处">分管财务副校长 / 财务处</option>
+              <option value="分管学工副书记 / 学工部">分管学工副书记 / 学工部</option>
+              <option value="分管人事副校长 / 人事处">分管人事副校长 / 人事处</option>
+              <option value="分管后勤安全副校长 / 保卫处">分管后勤安全副校长 / 保卫处</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-slate-400 mb-1">办结时限</label>
+            <select class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-slate-100 focus:outline-none focus:border-blue-500">
+              <option>3个工作日内反馈 (紧急)</option>
+              <option>7个工作日内制定整改台账</option>
+              <option>下月校务会前提交专题报告</option>
+            </select>
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-slate-400 mb-1">校领导批示意见 (支持语音速记输入)</label>
+          <textarea id="dispatch-instructions" rows="3" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-slate-100 focus:outline-none focus:border-blue-500 resize-none">请分管领导牵头，会同招生就业处、学院领导班子，组织专场IT招聘双选会，针对未就业困难生实行导师责任包干制，确保在11月中旬提升至全校平均线水平。</textarea>
+        </div>
+
+        <div class="p-2.5 bg-blue-950/40 border border-blue-900/60 rounded-lg text-slate-300 text-[11px] flex items-center justify-between">
+          <span class="flex items-center text-blue-400"><i data-lucide="check-circle2" class="w-3.5 h-3.5 mr-1"></i> 已关联校办督查督办台账系统 (全程红黄灯预警跟踪)</span>
+        </div>
+      </div>
+
+      <!-- Action Footer -->
+      <div class="mt-5 pt-3 border-t border-slate-800 flex justify-end space-x-2">
+        <button onclick="closeDispatchModal()" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-xs font-medium">取消</button>
+        <button onclick="submitDispatch()" class="px-4 py-1.5 bg-rose-600 hover:bg-rose-500 text-white rounded-lg text-xs font-medium flex items-center space-x-1 shadow-lg shadow-rose-600/30">
+          <i data-lucide="send" class="w-3.5 h-3.5"></i>
+          <span>正式签批并下发督办</span>
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+
+  <!-- ================= RIGHT SLIDE-OVER DRAWER: 全校预警台账抽屉 ================= -->
+  <div id="drawer-alerts" class="fixed inset-y-0 right-0 w-80 sm:w-96 bg-[#0f172a] border-l border-slate-800 shadow-2xl z-50 transform translate-x-full transition-transform duration-300 flex flex-col">
+    <div class="p-4 border-b border-slate-800 flex items-center justify-between">
+      <div class="flex items-center space-x-2">
+        <i data-lucide="bell" class="w-4 h-4 text-rose-400"></i>
+        <h3 class="font-bold text-sm text-white">全校运行异动与预警总表</h3>
+      </div>
+      <button onclick="toggleAlertDrawer()" class="p-1 rounded text-slate-400 hover:text-white">
+        <i data-lucide="x" class="w-5 h-5"></i>
+      </button>
+    </div>
+    
+    <div class="flex-1 overflow-y-auto p-4 space-y-3 text-xs">
+      <div class="p-3 bg-rose-950/30 border border-rose-800/50 rounded-lg">
+        <div class="flex justify-between font-semibold text-rose-400">
+          <span>[学工] 3名学生连续未归宿</span>
+          <span class="text-[10px] text-rose-300">红色告警</span>
+        </div>
+        <p class="text-slate-400 mt-1">轨迹道闸多日无进出校记录，已启动网格化排查。</p>
+      </div>
+      <div class="p-3 bg-amber-950/30 border border-amber-800/50 rounded-lg">
+        <div class="flex justify-between font-semibold text-amber-400">
+          <span>[资产] 药学院危化废液待处置</span>
+          <span class="text-[10px] text-amber-300">黄色预警</span>
+        </div>
+        <p class="text-slate-400 mt-1">废弃物仓库贮存周期接近28天极限，已安排环保车。</p>
+      </div>
+      <div class="p-3 bg-amber-950/30 border border-amber-800/50 rounded-lg">
+        <div class="flex justify-between font-semibold text-amber-400">
+          <span>[财务] 人工智能研究院预算偏慢</span>
+          <span class="text-[10px] text-amber-300">执行率31%</span>
+        </div>
+        <p class="text-slate-400 mt-1">GPU集群采购招标进度迟缓，已下发资金回收预警。</p>
+      </div>
+      <div class="p-3 bg-blue-950/30 border border-blue-800/50 rounded-lg">
+        <div class="flex justify-between font-semibold text-blue-400">
+          <span>[后勤] 普陀校区2号泵房水压轻微波动</span>
+          <span class="text-[10px] text-blue-300">提示</span>
+        </div>
+        <p class="text-slate-400 mt-1">水压降至0.38MPa已自动启动辅泵恢复至0.42MPa。</p>
+      </div>
+    </div>
+
+    <div class="p-3 border-t border-slate-800 text-center">
+      <button onclick="toggleAlertDrawer()" class="text-xs text-slate-400 hover:text-white">收起抽屉</button>
+    </div>
+  </div>
+
+
+  <!-- ================= FOOTER ================= -->
+  <footer class="border-t border-slate-900 bg-[#070c16] px-6 py-2.5 text-center text-xs text-slate-500">
+    <div class="flex flex-col sm:flex-row items-center justify-between max-w-[1920px] mx-auto">
+      <span>华东科技大学 · 信息化办公室 & 发展规划处 联合研制 • 领导驾驶舱 V4.2</span>
+      <span class="mt-1 sm:mt-0 font-mono">数据采集频率: 实时(秒级传感器/微服务总线) • 安全等保: 三级等保认证</span>
+    </div>
+  </footer>
+
+
+  <!-- ================= JAVASCRIPT LOGIC & ECHARTS INITIALIZATION ================= -->
+  <script>
+    // Lucide Icons Initialization
+    lucide.createIcons();
+
+    // Live Clock
+    function updateClock() {
+      const now = new Date();
+      const pad = (n) => String(n).padStart(2, '0');
+      const timeStr = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+      const clockEl = document.getElementById('live-clock');
+      if (clockEl) clockEl.textContent = timeStr;
+    }
+    setInterval(updateClock, 1000);
+    updateClock();
+
+    // Tab Management
+    let currentActiveTab = 'overview';
+    const chartInstances = {};
+
+    function switchTab(tabId) {
+      currentActiveTab = tabId;
+      
+      // Update Navigation button styles
+      document.querySelectorAll('#nav-tabs .tab-btn').forEach(btn => {
+        if (btn.getAttribute('data-tab') === tabId) {
+          btn.className = 'tab-btn active px-3.5 py-1.5 rounded-lg font-medium transition-all flex items-center space-x-2 bg-blue-600 text-white shadow-md shadow-blue-600/30';
+        } else {
+          btn.className = 'tab-btn px-3.5 py-1.5 rounded-lg font-medium text-slate-300 hover:text-white hover:bg-slate-800/80 transition-all flex items-center space-x-1.5';
+        }
+      });
+
+      // Show/hide sections
+      document.querySelectorAll('.tab-pane').forEach(pane => {
+        if (pane.id === `tab-${tabId}`) {
+          pane.classList.remove('hidden');
+        } else {
+          pane.classList.add('hidden');
+        }
+      });
+
+      // Re-trigger layout for echarts
+      setTimeout(() => {
+        renderChartsForTab(tabId);
+        Object.values(chartInstances).forEach(c => c && c.resize && c.resize());
+      }, 50);
+    }
+
+    // Window resize handler
+    window.addEventListener('resize', () => {
+      Object.values(chartInstances).forEach(c => c && c.resize && c.resize());
+    });
+
+    // Alert Drawer toggle
+    function toggleAlertDrawer() {
+      const drawer = document.getElementById('drawer-alerts');
+      drawer.classList.toggle('translate-x-full');
+    }
+
+    // Modal Control: College Drilldown
+    function openCollegeModal(collegeName) {
+      document.getElementById('modal-college-title').textContent = collegeName;
+      document.getElementById('modal-college').classList.remove('hidden');
+      setTimeout(initCollegeModalChart, 100);
+    }
+    function closeCollegeModal() {
+      document.getElementById('modal-college').classList.add('hidden');
+    }
+
+    // Modal Control: Dispatch / Direct Order
+    function openDispatchModal(alertTitle, recipientRole) {
+      if (alertTitle) {
+        document.getElementById('dispatch-title').value = alertTitle;
+      }
+      if (recipientRole) {
+        const select = document.getElementById('dispatch-recipient');
+        for (let i = 0; i < select.options.length; i++) {
+          if (select.options[i].text.includes(recipientRole)) {
+            select.selectedIndex = i;
+            break;
+          }
+        }
+      }
+      document.getElementById('modal-dispatch').classList.remove('hidden');
+    }
+    function closeDispatchModal() {
+      document.getElementById('modal-dispatch').classList.add('hidden');
+    }
+    function submitDispatch() {
+      const title = document.getElementById('dispatch-title').value;
+      alert(`【督办已成功签批下达】\n\n事项: ${title}\n督办指令已通过学校移动协同平台直达分管校领导及责任处室一把手，全程亮黄灯督办跟踪！`);
+      closeDispatchModal();
+    }
+    function simulateExport() {
+      alert('【校情简报生成成功】\n\n已汇总本周党委常委会/校长办公会专题核心指标简报 (PDF格式)，包含全校综合态势、科研经费走势及重点督办台账。');
+    }
+
+    // ================= ECHARTS DEFINITION & RENDERING =================
+    function initChart(id, option) {
+      const el = document.getElementById(id);
+      if (!el) return null;
+      if (chartInstances[id]) {
+        chartInstances[id].dispose();
+      }
+      const chart = echarts.init(el, 'dark', { renderer: 'canvas' });
+      chart.setOption(option);
+      chartInstances[id] = chart;
+      return chart;
+    }
+
+    // 1. Overview Tab Charts
+    function renderOverviewCharts() {
+      // 1.1 Strategic Radar
+      initChart('chart-strategic-radar', {
+        backgroundColor: 'transparent',
+        tooltip: { trigger: 'item' },
+        legend: {
+          bottom: 0,
+          data: ['本校当前达标度', '同梯队双一流标杆'],
+          textStyle: { color: '#94a3b8', fontSize: 11 }
+        },
+        radar: {
+          indicator: [
+            { name: '高端人才引育', max: 100 },
+            { name: '重大科研立项', max: 100 },
+            { name: '优质生源指数', max: 100 },
+            { name: '学科评估梯队', max: 100 },
+            { name: '国际化办学', max: 100 },
+            { name: '成果转化效益', max: 100 }
+          ],
+          radius: '62%',
+          splitNumber: 4,
+          axisName: { color: '#cbd5e1', fontSize: 10 },
+          splitLine: { lineStyle: { color: '#334155' } },
+          splitArea: { show: false },
+          axisLine: { lineStyle: { color: '#334155' } }
+        },
+        series: [{
+          type: 'radar',
+          data: [
+            {
+              value: [92, 88, 95, 84, 76, 90],
+              name: '本校当前达标度',
+              areaStyle: { color: 'rgba(59, 130, 246, 0.4)' },
+              lineStyle: { color: '#3b82f6', width: 2 }
+            },
+            {
+              value: [85, 82, 90, 80, 82, 78],
+              name: '同梯队双一流标杆',
+              lineStyle: { color: '#94a3b8', width: 1.5, type: 'dashed' },
+              areaStyle: { opacity: 0 }
+            }
+          ]
+        }]
+      });
+
+      // 1.2 Master Multi-Year Trend
+      initChart('chart-master-trend', {
+        backgroundColor: 'transparent',
+        tooltip: { trigger: 'axis' },
+        legend: {
+          top: 0,
+          data: ['科研到账经费(亿元)', '毕业生去向落实率(%)', '领军人才总量(人)'],
+          textStyle: { color: '#94a3b8', fontSize: 11 }
+        },
+        grid: { left: '3%', right: '4%', bottom: '5%', top: '15%', containLabel: true },
+        xAxis: {
+          type: 'category',
+          data: ['2022年', '2023年', '2024年', '2025年', '2026年(至今)'],
+          axisLine: { lineStyle: { color: '#334155' } },
+          axisLabel: { color: '#94a3b8' }
+        },
+        yAxis: [
+          {
+            type: 'value',
+            name: '经费/人才',
+            axisLabel: { color: '#94a3b8' },
+            splitLine: { lineStyle: { color: '#1e293b' } }
+          },
+          {
+            type: 'value',
+            name: '落实率(%)',
+            min: 70,
+            max: 100,
+            axisLabel: { color: '#94a3b8', formatter: '{value}%' },
+            splitLine: { show: false }
+          }
+        ],
+        series: [
+          {
+            name: '科研到账经费(亿元)',
+            type: 'bar',
+            data: [9.8, 11.2, 12.8, 13.6, 14.82],
+            barWidth: 20,
+            itemStyle: {
+              borderRadius: [4, 4, 0, 0],
+              color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                { offset: 0, color: '#38bdf8' },
+                { offset: 1, color: '#0369a1' }
+              ])
+            }
+          },
+          {
+            name: '领军人才总量(人)',
+            type: 'bar',
+            data: [72, 85, 98, 112, 128],
+            barWidth: 20,
+            itemStyle: {
+              borderRadius: [4, 4, 0, 0],
+              color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                { offset: 0, color: '#818cf8' },
+                { offset: 1, color: '#4338ca' }
+              ])
+            }
+          },
+          {
+            name: '毕业生去向落实率(%)',
+            type: 'line',
+            yAxisIndex: 1,
+            data: [84.2, 86.5, 89.1, 91.0, 88.6],
+            lineStyle: { color: '#10b981', width: 3 },
+            itemStyle: { color: '#10b981' },
+            smooth: true
+          }
+        ]
+      });
+    }
+
+    // 2. Education Tab Charts
+    function renderEducationCharts() {
+      // 2.1 Employment & Postgraduate rate by college
+      initChart('chart-edu-employment', {
+        backgroundColor: 'transparent',
+        tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+        legend: {
+          top: 0,
+          data: ['初次去向落实率', '升学深造率(考研/保研/出国)'],
+          textStyle: { color: '#94a3b8', fontSize: 11 }
+        },
+        grid: { left: '3%', right: '4%', bottom: '5%', top: '12%', containLabel: true },
+        xAxis: {
+          type: 'value',
+          max: 100,
+          axisLabel: { color: '#94a3b8', formatter: '{value}%' },
+          splitLine: { lineStyle: { color: '#1e293b' } }
+        },
+        yAxis: {
+          type: 'category',
+          data: ['外国语学院', '人工智能学院', '数理学院', '生工学院', '机械工程', '化学化工', '材料学院'],
+          axisLabel: { color: '#cbd5e1' },
+          axisLine: { lineStyle: { color: '#334155' } }
+        },
+        series: [
+          {
+            name: '初次去向落实率',
+            type: 'bar',
+            stack: 'total',
+            data: [76.5, 78.4, 88.2, 89.5, 91.8, 93.1, 94.2],
+            itemStyle: {
+              color: (params) => params.value < 80 ? '#f43f5e' : '#3b82f6'
+            },
+            markLine: {
+              data: [{ xAxis: 88.6, name: '全校均线' }],
+              lineStyle: { color: '#f59e0b', type: 'dashed' }
+            }
+          },
+          {
+            name: '升学深造率(考研/保研/出国)',
+            type: 'bar',
+            data: [28.0, 42.5, 51.0, 48.0, 44.5, 58.2, 62.5],
+            itemStyle: { color: '#10b981' }
+          }
+        ]
+      });
+
+      // 2.2 Admissions Quality by Province
+      initChart('chart-edu-admissions', {
+        backgroundColor: 'transparent',
+        tooltip: { trigger: 'axis' },
+        legend: { bottom: 0, textStyle: { color: '#94a3b8' } },
+        grid: { left: '3%', right: '4%', bottom: '15%', top: '10%', containLabel: true },
+        xAxis: {
+          type: 'category',
+          data: ['本省', '浙江', '江苏', '山东', '安徽', '四川', '湖北'],
+          axisLabel: { color: '#cbd5e1' }
+        },
+        yAxis: {
+          type: 'value',
+          name: '超特控线分值',
+          axisLabel: { color: '#94a3b8' },
+          splitLine: { lineStyle: { color: '#1e293b' } }
+        },
+        series: [{
+          name: '2026年平均超分',
+          type: 'bar',
+          data: [78, 71, 68, 64, 61, 59, 57],
+          itemStyle: {
+            color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+              { offset: 0, color: '#38bdf8' },
+              { offset: 1, color: '#0284c7' }
+            ]),
+            borderRadius: [4, 4, 0, 0]
+          }
+        }]
+      });
+    }
+
+    // 3. Research Tab Charts
+    function renderResearchCharts() {
+      initChart('chart-res-funds', {
+        backgroundColor: 'transparent',
+        tooltip: { trigger: 'axis' },
+        legend: { top: 0, textStyle: { color: '#94a3b8' } },
+        grid: { left: '3%', right: '4%', bottom: '5%', top: '12%', containLabel: true },
+        xAxis: {
+          type: 'category',
+          data: ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月'],
+          axisLabel: { color: '#cbd5e1' }
+        },
+        yAxis: {
+          type: 'value',
+          axisLabel: { color: '#94a3b8', formatter: '{value}亿' },
+          splitLine: { lineStyle: { color: '#1e293b' } }
+        },
+        series: [
+          {
+            name: '纵向基金(国家/部省)',
+            type: 'line',
+            stack: 'total',
+            areaStyle: { color: 'rgba(59, 130, 246, 0.3)' },
+            lineStyle: { color: '#3b82f6' },
+            data: [0.8, 1.4, 2.8, 4.1, 5.5, 7.2, 8.1, 8.8, 9.62]
+          },
+          {
+            name: '横向产学研与成果转化',
+            type: 'line',
+            stack: 'total',
+            areaStyle: { color: 'rgba(168, 85, 247, 0.3)' },
+            lineStyle: { color: '#a855f7' },
+            data: [0.4, 0.9, 1.6, 2.2, 3.1, 4.0, 4.4, 4.8, 5.20]
+          }
+        ]
+      });
+
+      initChart('chart-res-esi', {
+        backgroundColor: 'transparent',
+        tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+        grid: { left: '3%', right: '4%', bottom: '5%', top: '10%', containLabel: true },
+        xAxis: {
+          type: 'category',
+          data: ['材料科学', '化学', '工程学', '计算机', '环境与生态', '农业科学'],
+          axisLabel: { color: '#cbd5e1', interval: 0, rotate: 15 }
+        },
+        yAxis: {
+          type: 'value',
+          name: 'ESI全球位次‰/百分比',
+          axisLabel: { color: '#94a3b8' },
+          splitLine: { lineStyle: { color: '#1e293b' } }
+        },
+        series: [{
+          name: 'ESI当前分位',
+          type: 'bar',
+          data: [1.2, 1.8, 3.5, 5.2, 7.8, 9.1],
+          itemStyle: {
+            color: (p) => p.value <= 2.0 ? '#10b981' : '#6366f1',
+            borderRadius: [4, 4, 0, 0]
+          }
+        }]
+      });
+    }
+
+    // 4. Faculty Tab Charts
+    function renderFacultyCharts() {
+      initChart('chart-faculty-pyramid', {
+        backgroundColor: 'transparent',
+        tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+        legend: { top: 0, textStyle: { color: '#94a3b8' } },
+        grid: { left: '3%', right: '4%', bottom: '5%', top: '12%', containLabel: true },
+        xAxis: {
+          type: 'category',
+          data: ['30岁以下', '31-35岁', '36-45岁', '46-55岁', '56岁以上'],
+          axisLabel: { color: '#cbd5e1' }
+        },
+        yAxis: {
+          type: 'value',
+          name: '人数',
+          axisLabel: { color: '#94a3b8' },
+          splitLine: { lineStyle: { color: '#1e293b' } }
+        },
+        series: [
+          {
+            name: '正高级(教授/研究员)',
+            type: 'bar',
+            stack: 'total',
+            data: [4, 48, 280, 260, 98],
+            itemStyle: { color: '#8b5cf6' }
+          },
+          {
+            name: '副高级(副教授)',
+            type: 'bar',
+            stack: 'total',
+            data: [42, 310, 480, 180, 40],
+            itemStyle: { color: '#3b82f6' }
+          },
+          {
+            name: '中级及其他(讲师/助理)',
+            type: 'bar',
+            stack: 'total',
+            data: [180, 360, 150, 30, 8],
+            itemStyle: { color: '#06b6d4' }
+          }
+        ]
+      });
+
+      initChart('chart-faculty-talent', {
+        backgroundColor: 'transparent',
+        tooltip: { trigger: 'item' },
+        legend: { bottom: 0, textStyle: { color: '#94a3b8' } },
+        series: [{
+          name: '高层次人才学科分布',
+          type: 'pie',
+          radius: ['40%', '70%'],
+          avoidLabelOverlap: false,
+          itemStyle: { borderRadius: 6, borderColor: '#111b2e', borderWidth: 2 },
+          label: { show: false },
+          emphasis: { label: { show: true, fontSize: 12, fontWeight: 'bold' } },
+          data: [
+            { value: 48, name: '工科学部 (智能与制造)' },
+            { value: 36, name: '理科学部 (化学/材料/物理)' },
+            { value: 24, name: '生命医药与健康学部' },
+            { value: 12, name: '人文社科与管理学部' },
+            { value: 8, name: '交叉前沿创新平台' }
+          ]
+        }]
+      });
+    }
+
+    // 5. Finance Tab Charts
+    function renderFinanceCharts() {
+      initChart('chart-fin-budget', {
+        backgroundColor: 'transparent',
+        tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+        grid: { left: '3%', right: '4%', bottom: '5%', top: '10%', containLabel: true },
+        xAxis: {
+          type: 'value',
+          max: 100,
+          axisLabel: { color: '#94a3b8', formatter: '{value}%' },
+          splitLine: { lineStyle: { color: '#1e293b' } }
+        },
+        yAxis: {
+          type: 'category',
+          data: ['人工智能研究院', '后勤保障处', '国际交流处', '图书馆', '理学院', '信息学院', '材料学院'],
+          axisLabel: { color: '#cbd5e1' }
+        },
+        series: [{
+          name: '预算执行进度',
+          type: 'bar',
+          data: [31.4, 52.1, 58.6, 68.2, 74.5, 79.0, 86.5],
+          itemStyle: {
+            color: (p) => p.value < 55 ? '#f43f5e' : (p.value < 70 ? '#f59e0b' : '#10b981'),
+            borderRadius: [0, 4, 4, 0]
+          },
+          markLine: {
+            data: [{ xAxis: 72.5, name: '序时参考线 72.5%' }],
+            lineStyle: { color: '#e2e8f0', type: 'dashed' }
+          }
+        }]
+      });
+
+      initChart('chart-fin-expenses', {
+        backgroundColor: 'transparent',
+        tooltip: { trigger: 'item' },
+        legend: { bottom: 0, textStyle: { color: '#94a3b8', fontSize: 10 } },
+        series: [{
+          name: '支出结构',
+          type: 'pie',
+          radius: ['45%', '68%'],
+          itemStyle: { borderRadius: 4, borderColor: '#111b2e', borderWidth: 2 },
+          data: [
+            { value: 14.8, name: '人员经费与教师薪酬' },
+            { value: 8.2, name: '教学科研运行与耗材' },
+            { value: 4.6, name: '基建修缮与校区维护' },
+            { value: 3.4, name: '学生资助与奖助学金' },
+            { value: 2.27, name: '信息化与行政运转' }
+          ]
+        }]
+      });
+    }
+
+    // 6. Student Tab Charts
+    function renderStudentCharts() {
+      initChart('chart-stu-psych', {
+        backgroundColor: 'transparent',
+        tooltip: { trigger: 'axis' },
+        legend: { top: 0, textStyle: { color: '#94a3b8' } },
+        grid: { left: '3%', right: '4%', bottom: '5%', top: '12%', containLabel: true },
+        xAxis: {
+          type: 'category',
+          data: ['大一', '大二', '大三', '大四', '研一', '研二', '研三/博士'],
+          axisLabel: { color: '#cbd5e1' }
+        },
+        yAxis: {
+          type: 'value',
+          name: '关注个案数',
+          axisLabel: { color: '#94a3b8' },
+          splitLine: { lineStyle: { color: '#1e293b' } }
+        },
+        series: [
+          {
+            name: '高危重点关注(红色)',
+            type: 'bar',
+            data: [4, 12, 6, 8, 2, 7, 3],
+            itemStyle: { color: '#ef4444', borderRadius: [3, 3, 0, 0] }
+          },
+          {
+            name: '中度波动关爱(黄色)',
+            type: 'bar',
+            data: [18, 38, 24, 29, 12, 31, 15],
+            itemStyle: { color: '#f59e0b', borderRadius: [3, 3, 0, 0] }
+          }
+        ]
+      });
+
+      initChart('chart-stu-anomaly', {
+        backgroundColor: 'transparent',
+        tooltip: { trigger: 'axis' },
+        grid: { left: '3%', right: '4%', bottom: '5%', top: '10%', containLabel: true },
+        xAxis: {
+          type: 'category',
+          data: ['周一', '周二', '周三', '周四', '周五', '周六', '周日'],
+          axisLabel: { color: '#cbd5e1' }
+        },
+        yAxis: {
+          type: 'value',
+          name: '异常行为触发预警次数',
+          axisLabel: { color: '#94a3b8' },
+          splitLine: { lineStyle: { color: '#1e293b' } }
+        },
+        series: [{
+          name: '触发预警数',
+          type: 'line',
+          data: [12, 8, 15, 6, 18, 26, 21],
+          smooth: true,
+          lineStyle: { color: '#ec4899', width: 3 },
+          areaStyle: { color: 'rgba(236, 72, 153, 0.2)' }
+        }]
+      });
+    }
+
+    // 7. Security Tab Charts
+    function renderSecurityCharts() {
+      initChart('chart-sec-energy', {
+        backgroundColor: 'transparent',
+        tooltip: { trigger: 'axis' },
+        legend: { top: 0, textStyle: { color: '#94a3b8' } },
+        grid: { left: '3%', right: '4%', bottom: '5%', top: '12%', containLabel: true },
+        xAxis: {
+          type: 'category',
+          data: ['1日', '5日', '10日', '15日', '20日', '25日', '30日'],
+          axisLabel: { color: '#cbd5e1' }
+        },
+        yAxis: {
+          type: 'value',
+          name: '用电负荷(万度)',
+          axisLabel: { color: '#94a3b8' },
+          splitLine: { lineStyle: { color: '#1e293b' } }
+        },
+        series: [{
+          name: '全校实际用能',
+          type: 'line',
+          data: [7.8, 8.2, 8.5, 9.1, 8.4, 8.3, 8.4],
+          lineStyle: { color: '#06b6d4', width: 3 },
+          smooth: true,
+          markPoint: {
+            data: [{ type: 'max', name: '峰值', itemStyle: { color: '#f59e0b' } }]
+          }
+        }]
+      });
+
+      initChart('chart-sec-crowd', {
+        backgroundColor: 'transparent',
+        tooltip: { trigger: 'item' },
+        grid: { left: '3%', right: '4%', bottom: '5%', top: '10%', containLabel: true },
+        xAxis: {
+          type: 'category',
+          data: ['第一食堂', '中心图书馆', '体育馆', '教学主楼', '海港校区大门'],
+          axisLabel: { color: '#cbd5e1', interval: 0, rotate: 10 }
+        },
+        yAxis: {
+          type: 'value',
+          name: '实时人流量(人/分)',
+          axisLabel: { color: '#94a3b8' },
+          splitLine: { lineStyle: { color: '#1e293b' } }
+        },
+        series: [{
+          name: '人员密度',
+          type: 'bar',
+          data: [320, 180, 85, 410, 130],
+          itemStyle: {
+            color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+              { offset: 0, color: '#10b981' },
+              { offset: 1, color: '#047857' }
+            ]),
+            borderRadius: [4, 4, 0, 0]
+          }
+        }]
+      });
+    }
+
+    // Modal College Detail Radar
+    function initCollegeModalChart() {
+      initChart('chart-modal-college-radar', {
+        backgroundColor: 'transparent',
+        radar: {
+          indicator: [
+            { name: '人才培养', max: 100 },
+            { name: '科研平台', max: 100 },
+            { name: '师资结构', max: 100 },
+            { name: '国际化', max: 100 },
+            { name: '产业转化', max: 100 }
+          ],
+          radius: '65%',
+          splitNumber: 4,
+          axisName: { color: '#cbd5e1', fontSize: 10 },
+          splitLine: { lineStyle: { color: '#334155' } },
+          axisLine: { lineStyle: { color: '#334155' } }
+        },
+        series: [{
+          type: 'radar',
+          data: [
+            {
+              value: [96, 98, 92, 85, 94],
+              name: '学院指标综合评价',
+              areaStyle: { color: 'rgba(16, 185, 129, 0.4)' },
+              lineStyle: { color: '#10b981', width: 2 }
+            }
+          ]
+        }]
+      });
+    }
+
+    function renderChartsForTab(tabId) {
+      if (tabId === 'overview') renderOverviewCharts();
+      if (tabId === 'education') renderEducationCharts();
+      if (tabId === 'research') renderResearchCharts();
+      if (tabId === 'faculty') renderFacultyCharts();
+      if (tabId === 'finance') renderFinanceCharts();
+      if (tabId === 'student') renderStudentCharts();
+      if (tabId === 'security') renderSecurityCharts();
+    }
+
+    // Initial load
+    window.addEventListener('DOMContentLoaded', () => {
+      renderOverviewCharts();
+    });
+  </script>
+</body>
+</html>
